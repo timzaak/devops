@@ -15,7 +15,7 @@ lazy val root = project
     version := "0.1.0-SNAPSHOT",
     scalaVersion := scala3Version,
     libraryDependencies ++= Seq(
-      "com.hierynomus" % "sshj" % "0.39.0",
+      "com.sshtools" % "maverick-synergy-client" % "3.1.2",
       "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
       "ch.qos.logback" % "logback-classic" % "1.5.18",
       "io.circe" %% "circe-config" % "0.10.1",
