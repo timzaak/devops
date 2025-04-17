@@ -5,6 +5,7 @@ lazy val jsonLib = {
   val circeVersion = "0.14.1"
   Seq("io.circe" %% "circe-core",
     "io.circe" %% "circe-generic",
+    "io.circe" %% "circe-extras",
     "io.circe" %% "circe-parser").map(_ % circeVersion)
 }
 
