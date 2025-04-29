@@ -1,0 +1,1 @@
+echo "Hello ${SELF_ENV}"

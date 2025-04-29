@@ -1,5 +1,24 @@
 <configuration>
     <statusListener class="ch.qos.logback.core.status.NopStatusListener" />
+
+    <appender name="PROCESS" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%message%n</pattern>
+        </encoder>
+    </appender>
+    <logger name="process" level="INFO" additivity="false">
+        <appender-ref ref="PROCESS" />
+    </logger>
+
+    <appender name="COMMAND" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%boldCyan(%d{HH:mm:ss} %message%n)</pattern>
+        </encoder>
+    </appender>
+    <logger name="command" level="INFO" additivity="false">
+        <appender-ref ref="COMMAND" />
+    </logger>
+
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%message%n%xException{10}</pattern>
@@ -11,6 +30,7 @@
     </appender>
     <logger name="ch.qos.logback" level="WARN"/>
     <logger name="net.schmizz" level="WARN"/>
+
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>
