@@ -8,13 +8,17 @@ import com.typesafe.config.ConfigFactory
 object DockerTransfer {
   def main(args: Array[String]) = {
     val host = ConfigFactory.load().getString("repository.docker.host")
-    val image = args(0)
 
     localRun { implicit session =>
-      s"docker pull ${image}".!!
-      s"docker tag ${image} ${host}/${image}".!!
-      s"docker push ${host}/${image}".!!
-    }
+      args.foreach { image =>
+        s"docker pull ${image}".!!
+        val newImageName = image.replace("quay.io/", "")
+        val target = s"${host}/${newImageName}"
 
-  }
+        s"docker tag ${image} ${target}".!!
+        s"docker push ${target}".!!
+        s"docker rmi ${image}".!!
+        s"docker rmi ${target}".!!
+      }
+    }
 }
