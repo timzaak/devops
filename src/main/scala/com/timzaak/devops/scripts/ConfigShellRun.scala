@@ -14,10 +14,11 @@ object ConfigShellRun {
   /**
    * config would like:
    * {
-   * host: "test_net"
-   * file: "scripts/deploy_backend.sh"
-   * env: {
-   * VERSION = 1.1.8
+   *   host: "test_net"
+   *   file: "scripts/deploy_backend.sh"
+   *   env: {
+   *     VERSION = 1.1.8
+   *   }  
    * }
    */
   def remoteRun(prefix: String,extraEnv:Map[String,String]=Map.empty)(using conf: Config = ConfigFactory.load()): Unit = {

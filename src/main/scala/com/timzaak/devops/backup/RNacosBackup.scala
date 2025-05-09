@@ -14,8 +14,9 @@ class RNacosBackup(url: String, token: String) {
       .send(client)
     if (result.isSuccess) {
       storage.createFileIfNotExists(true)
-      storage.writeBytes(result.body)
+      storage.writeByteArray(result.body)
+
     }
-    result.isSuccess
+    result
   }
 }
