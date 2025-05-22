@@ -18,6 +18,12 @@ class ProcessLoggerWrap extends ProcessLogger {
 private val processLogWrap: ProcessLogger = new ProcessLoggerWrap()
 private val commandLog: Logger = Logger("command")
 
+object LocalSession {
+  lazy val isWindows: Boolean = {
+    System.getProperty("os.name").toLowerCase.contains("win")
+  }
+}
+
 class LocalSession(val env:(String,String)*) {
   var cwd :Option[File] = None
 
@@ -29,11 +35,16 @@ class LocalSession(val env:(String,String)*) {
     cwd = Some(new File(path))
   }
   def runScripts(filePath:String): Unit = {
-    //val commands = SimpleShellParser.parser(scriptContent)
     given LocalSession = this
     import LocalProcessExtra.!!
-    //TODO:  support multiple platform
-    mustOK(s"""powershell -WindowStyle Hidden -File "${filePath}" """.!!)
+
+    if (LocalSession.isWindows) {
+      mustOK(s"""powershell -WindowStyle Hidden -File "$filePath" """.!!)
+    } else {
+      // TODO:support sh 、bash、fish ?
+      mustOK(s"bash \"$filePath\"".!!)
+    }
+    
   }
 
 }
