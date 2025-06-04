@@ -26,6 +26,6 @@ lazy val root = project
       "com.softwaremill.sttp.client4" %% "circe" % "4.0.7",
       "org.bouncycastle" % "bcprov-jdk18on" % "1.80",
       // "com.lihaoyi" % "ammonite" % "3.0.2" cross CrossVersion.full,
-      "org.scalameta" %% "munit" % "1.1.1" % Test
+      "org.scalameta" %% "munit" % "0.7.29" % "test"
     ) ++ jsonLib
   )

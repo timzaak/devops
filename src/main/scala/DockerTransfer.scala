@@ -21,4 +21,5 @@ object DockerTransfer {
         s"docker rmi ${target}".!!
       }
     }
+  }
 }
