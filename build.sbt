@@ -1,4 +1,4 @@
-val scala3Version = "3.6.4"
+val scala3Version = "3.7.1"
 
 
 lazy val jsonLib = {
@@ -22,9 +22,10 @@ lazy val root = project
       "io.circe" %% "circe-config" % "0.10.1",
       "io.circe" %% "circe-optics" % "0.15.0",
       "com.github.pathikrit" %% "better-files" % "3.9.2",
-      "com.softwaremill.sttp.client4" %% "core" % "4.0.7",
-      "com.softwaremill.sttp.client4" %% "circe" % "4.0.7",
-      "org.bouncycastle" % "bcprov-jdk18on" % "1.80",
+      "com.softwaremill.sttp.client4" %% "core" % "4.0.8",
+      "com.softwaremill.sttp.client4" %% "circe" % "4.0.8",
+      "com.github.ghostdogpr" %% "caliban-client" % "2.10.0",
+      "org.bouncycastle" % "bcprov-jdk18on" % "1.81",
       // "com.lihaoyi" % "ammonite" % "3.0.2" cross CrossVersion.full,
       "org.scalameta" %% "munit" % "1.1.1" % Test
     ) ++ jsonLib

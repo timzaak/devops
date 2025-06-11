@@ -22,7 +22,7 @@ class Kubectl(namespace: String, context: String = "default") {
 
   def rolloutStatus(service:String, `type`:"deployment"|"statefulSet" = "deployment"):Unit = {
     localRun{ implicit session =>
-      s"kubectl rollout status ${`type`}/$service"
+      s"kubectl rollout status ${`type`}/$service".!!
     }
   }
 
