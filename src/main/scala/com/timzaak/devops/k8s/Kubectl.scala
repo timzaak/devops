@@ -1,5 +1,6 @@
 package com.timzaak.devops.k8s
 
+import better.files.File
 import com.timzaak.devops.extra.LocalProcessExtra.*
 // PS: local host should install kubectl and config correctly
 class Kubectl(namespace: String, context: String = "default") {
@@ -23,6 +24,17 @@ class Kubectl(namespace: String, context: String = "default") {
   def rolloutStatus(service:String, `type`:"deployment"|"statefulSet" = "deployment"):Unit = {
     localRun{ implicit session =>
       s"kubectl rollout status ${`type`}/$service".!!
+    }
+  }
+
+  def upgradeTLS(name: String, certPath:String,keyPath:String): Unit = {
+    localRun {implicit shell =>
+      File.temporaryFile(suffix = ".yaml").foreach { f =>
+        s"""kubectl create secret tls $name --cert="${certPath}" --key="${keyPath}" -n=$namespace --dry-run=client -o yaml""".#>(f.toJava).!!
+        s"cat ${f.pathAsString}".!!
+        s"kubectl apply -f ${f.pathAsString}".!!
+      }
+      s"kubectl get secret $name -o yaml -n=$namespace".!!
     }
   }
 
