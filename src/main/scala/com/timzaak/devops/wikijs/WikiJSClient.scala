@@ -1,7 +1,8 @@
 package com.timzaak.devops.wikijs
 
-import com.timzaak.devops.wikijs.WikiJSSchema.*
+import WikiJSSchema.*
 import sttp.client3.*
+import caliban.client.SelectionBuilder
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

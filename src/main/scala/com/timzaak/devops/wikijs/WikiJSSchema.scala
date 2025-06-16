@@ -1,5 +1,10 @@
 package com.timzaak.devops.wikijs
 
+import caliban.client.*
+import caliban.client.CalibanClientError.DecodingError
+import caliban.client.FieldBuilder.*
+import caliban.client.__Value.*
+
 object WikiJSSchema {
 
   type Date = String
