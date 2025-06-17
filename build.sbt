@@ -1,5 +1,6 @@
 val scala3Version = "3.7.1"
 
+enablePlugins(JavaAppPackaging)
 
 lazy val jsonLib = {
   val circeVersion = "0.14.1"
