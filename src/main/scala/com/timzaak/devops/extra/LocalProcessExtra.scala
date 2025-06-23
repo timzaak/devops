@@ -2,7 +2,7 @@ package com.timzaak.devops.extra
 
 import com.timzaak.devops.extra.LocalSession.isWindows
 
-import java.io.File
+import java.io.{File, OutputStream}
 import scala.sys.process
 import sys.process.Process
 
@@ -63,6 +63,11 @@ object LocalProcessExtra {
     def #>(file:File): process.ProcessBuilder = {
       localHost.log.command(command + " > " + file.getAbsolutePath)
       Process(command, localHost.cwd, localHost.env*).#>(file)
+    }
+
+    def #>(out: => OutputStream) = {
+      localHost.log.command(command + s" > $${param}")
+      Process(command, localHost.cwd, localHost.env *).#>(out)
     }
 
     def &&(other:String): CodeWrap = {

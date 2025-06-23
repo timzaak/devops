@@ -2,6 +2,8 @@ package com.timzaak.devops.k8s
 
 import better.files.File
 import com.timzaak.devops.extra.LocalProcessExtra.*
+
+import java.io.ByteArrayOutputStream
 // PS: local host should install kubectl and config correctly
 class Kubectl(namespace: String, context: String = "default") {
 
@@ -31,10 +33,17 @@ class Kubectl(namespace: String, context: String = "default") {
     localRun {implicit shell =>
       File.temporaryFile(suffix = ".yaml").foreach { f =>
         s"""kubectl create secret tls $name --cert="${certPath}" --key="${keyPath}" -n=$namespace --dry-run=client -o yaml""".#>(f.toJava).!!
-        s"cat ${f.pathAsString}".!!
         s"kubectl apply -f ${f.pathAsString}".!!
       }
       s"kubectl get secret $name -o yaml -n=$namespace".!!
+    }
+  }
+
+  def scaleAllDeployments(num: Int = 0) = {
+    localRun { implicit session =>
+      val baos = ByteArrayOutputStream()
+      "kubectl get deploy -o name".#>(baos).!!
+      baos.toString.split("\n").foreach(name => s"kubectl scale $name --replicas=$num".!!)
     }
   }
 
