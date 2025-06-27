@@ -17,7 +17,6 @@ object RenewSSLCert {
         s"--dns dns_ali -d $domain -d '*.$domain'".!!
     }
 
-
     /*
     val cerPath = basePath + s"\\$domain.cer"
     val keyPath = basePath + s"\\$domain.key"

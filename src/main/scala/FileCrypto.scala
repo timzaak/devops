@@ -4,10 +4,10 @@ import mainargs.{ ParserForMethods, arg, main }
 
 import java.util.Base64
 
-type CompressType = "none" | "zip" | "tar"
-type Mode = "decrypt"| "encrypt"
-
 object FileCrypto {
+  private type CompressType = "none" | "zip" | "tar"
+  private type Mode = "decrypt" | "encrypt"
+
   @main
   def argsRun(
     @arg(name = "source") _source: String,
@@ -19,8 +19,8 @@ object FileCrypto {
     assert(source.exists, s"source: ${_source} does not exists")
 
     val mode = _mode.getOrElse("encrypt") match {
-      case v :Mode => v
-      case _ => throw IllegalArgumentException("mode should be one of encrypt or decrypt")
+      case v: Mode => v
+      case _       => throw IllegalArgumentException("mode should be one of encrypt or decrypt")
     }
 
     val targetPath = mode match {
@@ -49,7 +49,6 @@ object FileCrypto {
         }
         encrypt(source, target, key)
     }
-
 
   }
 

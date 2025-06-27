@@ -3,6 +3,8 @@ package com.timzaak.devops.backup
 import better.files.*
 import munit.FunSuite
 
+import java.util.Base64
+
 class FileCryptoSuite extends FunSuite {
   test("encrypt and decrypt") {
     val key = FileCrypto.generateKey()
@@ -19,6 +21,12 @@ class FileCryptoSuite extends FunSuite {
         assertEquals(endFile.contentAsString(), "hello world xx123")
       }
     }
+  }
+
+  test("generate key".ignore) {
+    val key = FileCrypto.generateKey()
+    // "40VjYwTbqyg4Oy7ViTnDYuTAgcBG60yHgWgD+v3QXz0="
+    println(Base64.getEncoder.encodeToString(key))
   }
 
 }

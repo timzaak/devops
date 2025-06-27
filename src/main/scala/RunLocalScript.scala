@@ -1,6 +1,5 @@
 import com.timzaak.devops.scripts.ConfigShellRun
 
-
 object RunLocalScript {
   def main(args: Array[String]): Unit = {
     val env = args.tail.map { v =>

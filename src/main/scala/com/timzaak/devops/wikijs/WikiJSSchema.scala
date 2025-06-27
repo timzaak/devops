@@ -5,6 +5,9 @@ import caliban.client.CalibanClientError.DecodingError
 import caliban.client.FieldBuilder.*
 import caliban.client.__Value.*
 
+import scala.annotation.nowarn
+
+@nowarn
 object WikiJSSchema {
 
   type Date = String

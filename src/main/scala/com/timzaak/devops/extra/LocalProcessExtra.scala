@@ -2,7 +2,7 @@ package com.timzaak.devops.extra
 
 import com.timzaak.devops.extra.LocalSession.isWindows
 
-import java.io.{File, OutputStream}
+import java.io.{ File, OutputStream }
 import scala.sys.process
 import sys.process.Process
 
@@ -12,20 +12,19 @@ object LocalSession {
   }
 }
 
-class LocalSession(val env:(String,String)*)(val log: ProcessOutput = LocalProcessExtra.defaultProcessOutput) {
-  var cwd :Option[File] = None
+class LocalSession(val env: (String, String)*)(val log: ProcessOutput = LocalProcessExtra.defaultProcessOutput) {
+  var cwd: Option[File] = None
 
-
-  def cd(path:String): Unit = {
+  def cd(path: String): Unit = {
     log.command(s"cd $path")
     val newCwd = new File(path)
     assert(newCwd.isDirectory, s"path does not exists")
     cwd = Some(new File(path))
   }
-  def runScripts(filePath:String): Unit = {
+  def runScripts(filePath: String): Unit = {
     given LocalSession = this
     import LocalProcessExtra.!!
-    if(isWindows) {
+    if (isWindows) {
       s"""powershell -WindowStyle Hidden -File "${filePath}" """.!!
     } else {
       // TODO:support sh 、bash、fish ?
@@ -36,10 +35,12 @@ class LocalSession(val env:(String,String)*)(val log: ProcessOutput = LocalProce
 }
 object LocalProcessExtra {
   val defaultProcessOutput = LogProcessOutput()
-  def localRun(env: (String, String)*)(function: LocalSession => Unit, log: ProcessOutput = defaultProcessOutput): Unit = {
+  def localRun(
+    env: (String, String)*
+  )(function: LocalSession => Unit, log: ProcessOutput = defaultProcessOutput): Unit = {
     function(LocalSession(env*)(log))
   }
-  def localRun(function: LocalSession => Unit):Unit = {
+  def localRun(function: LocalSession => Unit): Unit = {
     function(LocalSession()(defaultProcessOutput))
   }
 
@@ -47,7 +48,6 @@ object LocalProcessExtra {
 
   inline def runScripts(scriptContent: String)(using localHost: LocalSession): Unit =
     localHost.runScripts(scriptContent)
-
 
   extension (command: String)(using localHost: LocalSession) {
     def ! : CodeWrap = {
@@ -60,21 +60,22 @@ object LocalProcessExtra {
       mustOK(CodeWrap(Process(command, localHost.cwd, localHost.env*).!(localHost.log.process)))
     }
 
-    def #>(file:File): process.ProcessBuilder = {
+    def #>(file: File): process.ProcessBuilder = {
       localHost.log.command(command + " > " + file.getAbsolutePath)
       Process(command, localHost.cwd, localHost.env*).#>(file)
     }
 
     def #>(out: => OutputStream) = {
       localHost.log.command(command + s" > $${param}")
-      Process(command, localHost.cwd, localHost.env *).#>(out)
+      Process(command, localHost.cwd, localHost.env*).#>(out)
     }
 
-    def &&(other:String): CodeWrap = {
+    def &&(other: String): CodeWrap = {
       localHost.log.command(s"$command && $other")
-      CodeWrap(Process(command, localHost.cwd, localHost.env*).!(localHost.log.process)) && CodeWrap(Process(other, localHost.cwd, localHost.env*).!(localHost.log.process))
+      CodeWrap(Process(command, localHost.cwd, localHost.env*).!(localHost.log.process)) && CodeWrap(
+        Process(other, localHost.cwd, localHost.env*).!(localHost.log.process)
+      )
     }
-
 
   }
 }

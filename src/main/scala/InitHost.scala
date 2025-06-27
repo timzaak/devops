@@ -7,9 +7,9 @@ import com.typesafe.config.{ Config, ConfigFactory }
   given conf: Config = ConfigFactory.load()
 
   val publicKey = conf.getString("office.devops.public")
-  def filters = (v:SSHClientConfig) => v.name != "monitor" && v.name != "jenkins"
+  def filters = (v: SSHClientConfig) => v.name != "monitor" && v.name != "jenkins"
 
-  for(client <- SSHClientBuild.loadFromConfig("office.servers", filters)) {
+  for (client <- SSHClientBuild.loadFromConfig("office.servers", filters)) {
     client.run { implicit shell =>
       // set ssh public keys
       mustOK("mkdir -p ~/.ssh".! && s"""echo "$publicKey" >> ~/.ssh/authorized_keys""".!)

@@ -8,7 +8,6 @@ trait ProcessOutput {
   def command: String => Unit
 }
 
-
 class LogProcessOutput extends ProcessOutput {
 
   private val commandLog = Logger("command")

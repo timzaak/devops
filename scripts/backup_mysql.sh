@@ -13,6 +13,7 @@ docker run --rm --network=host mysql:8.4 mysqldump \
   --opt -h ${MYSQL_HOST} -u ${MYSQL_USER} -p${MYSQL_PASSWORD} --add-drop-database --complete-insert ${DB} | gzip > ${db_path}
 
 # secret the db_path, using FileCrypto
-
+# ./bin/FileCrypt -- --source=${db_path} --key="40VjYwTbqyg4Oy7ViTnDYuTAgcBG60yHgWgD+v3QXz0="
+# /server/bin/backup/ossutil -c /server/conf/backup/.ossutilconfig cp ${db_path}.enc oss://${BUCKET}/office/db/${DB}/
 # oss path need to change
 /server/bin/backup/ossutil -c /server/conf/backup/.ossutilconfig cp ${db_path} oss://${BUCKET}/office/db/${DB}/

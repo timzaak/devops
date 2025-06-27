@@ -2,13 +2,13 @@ package com.timzaak.devops.client
 
 import com.sshtools.client.SshClient
 import com.sshtools.client.scp.ScpClient
-import com.sshtools.client.shell.ExpectShell
 import com.sshtools.client.tasks.ShellTask
 import com.typesafe.scalalogging.Logger
 import com.timzaak.devops.config.SSHClientConfig
 import com.timzaak.devops.extra.ShellExtra.*
 import com.timzaak.devops.parser.SimpleShellParser
 
+case class ExpectShell(shell: com.sshtools.client.shell.ExpectShell, rootPassword: Option[String])
 
 case class SSHClient(client: SshClient, info: SSHClientConfig) {
 
@@ -20,7 +20,8 @@ case class SSHClient(client: SshClient, info: SSHClientConfig) {
         .create()
         .withClient(client)
         .onTask((t, session) => {
-          val shell = new ExpectShell(t)
+          val shell =
+            ExpectShell(new com.sshtools.client.shell.ExpectShell(t), info.rootPassword.orElse(Some(info.password)))
           try {
             commandLog.info(s"Server: ${info.name} connected")
             func(shell)
@@ -37,16 +38,19 @@ case class SSHClient(client: SshClient, info: SSHClientConfig) {
 
   def scpClient = new ScpClient(client)
 
-  def runScript(scriptContent:String, env:Map[String,String] = Map.empty): Unit = {
+  def runScript(scriptContent: String, env: Map[String, String] = Map.empty): Unit = {
     run { implicit shell =>
       val commands = SimpleShellParser.parser(scriptContent)
       commandLog.debug(s"shell scripts parse result:\n + ${commands.mkString("\n")}")
-      if(env.nonEmpty) {
+      if (env.nonEmpty) {
         shell.setEnv(env)
       }
-      for(command <- commands) {
-        //noinspection ScalaUnusedExpression
-        command.!!
+      for (command <- commands) {
+        if (command.startsWith("sudo")) {
+          command.`sudo!`
+        } else {
+          command.!!
+        }
       }
     }
   }

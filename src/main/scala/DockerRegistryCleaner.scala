@@ -1,12 +1,9 @@
-import com.timzaak.devops.docker.{Config, RepositoryAPI}
+import com.timzaak.devops.docker.{ Config, RepositoryAPI }
 import com.typesafe.config.ConfigFactory
 import io.circe.*
 import io.circe.config.syntax.*
 import io.circe.generic.auto.*
 import sttp.client4.*
-
-
-
 
 object DockerRegistryCleaner {
 
@@ -44,7 +41,7 @@ object DockerRegistryCleaner {
   }
 
   // 主清理方法
-  private def cleanRepositories(api:  RepositoryAPI): Unit = {
+  private def cleanRepositories(api: RepositoryAPI): Unit = {
     given backend: WebSocketSyncBackend = DefaultSyncBackend()
 
     try {

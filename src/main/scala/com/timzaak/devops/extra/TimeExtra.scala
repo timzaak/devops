@@ -9,5 +9,3 @@ object TimeExtra {
   def nowMinuteString: String = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmm"))
 
 }
-
-

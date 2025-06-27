@@ -25,7 +25,7 @@ case class ImageTag(
   lastModified: Instant
 )
 
-class RepositoryAPI(config:Config) {
+class RepositoryAPI(config: Config) {
 
   // 使用 circe optics 定义 JSON 路径
   private object DockerRegistryJson {
@@ -50,7 +50,6 @@ class RepositoryAPI(config:Config) {
         throw new RuntimeException(s"Failed to get repositories: $error")
     }
   }
-
 
   // 获取仓库的所有标签 - 使用 optics 提取 tags 数组
   def getTags(repository: String)(using backend: WebSocketSyncBackend): List[String] = {
