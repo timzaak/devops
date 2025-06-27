@@ -3,7 +3,6 @@ package com.timzaak.devops.extra
 import com.timzaak.devops.extra.LocalSession.isWindows
 
 import java.io.{ File, OutputStream }
-import scala.sys.process
 import sys.process.Process
 
 object LocalSession {
@@ -60,7 +59,7 @@ object LocalProcessExtra {
       mustOK(CodeWrap(Process(command, localHost.cwd, localHost.env*).!(localHost.log.process)))
     }
 
-    def #>(file: File): process.ProcessBuilder = {
+    def #>(file: File) = {
       localHost.log.command(command + " > " + file.getAbsolutePath)
       Process(command, localHost.cwd, localHost.env*).#>(file)
     }
@@ -75,6 +74,19 @@ object LocalProcessExtra {
       CodeWrap(Process(command, localHost.cwd, localHost.env*).!(localHost.log.process)) && CodeWrap(
         Process(other, localHost.cwd, localHost.env*).!(localHost.log.process)
       )
+    }
+
+    def c: CodeWrap = {
+      if (isWindows) {
+        localHost.log.command(s"powershell -c $command")
+        CodeWrap(Process(Seq("powershell", "-c", command), localHost.cwd, localHost.env*).!(localHost.log.process))
+      } else {
+        localHost.log.command(s"$command")
+        CodeWrap(Process(command, localHost.cwd, localHost.env*).!(localHost.log.process))
+      }
+    }
+    def `c!`: Unit = {
+      mustOK(c)
     }
 
   }

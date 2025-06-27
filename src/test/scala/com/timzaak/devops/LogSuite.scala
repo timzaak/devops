@@ -3,7 +3,6 @@ package com.timzaak.devops
 import munit.FunSuite
 import com.typesafe.scalalogging.Logger
 
-
 class LogSuite extends FunSuite {
 
   val output = Logger("output")
@@ -12,7 +11,6 @@ class LogSuite extends FunSuite {
   test("log output format") {
     command.info("echo 'hello world'")
     output.info("hello world")
-
 
   }
 }
