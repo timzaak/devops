@@ -21,5 +21,5 @@ jobs:
       - name: format check
         run: sbt scalafmtCheckAll
       - name: Run SBT stage
-        run: sbt build
+        run: sbt stage
 
