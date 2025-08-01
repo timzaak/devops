@@ -26,8 +26,11 @@ lazy val root = project
       "com.github.pathikrit" %% "better-files" % "3.9.2",
       "com.softwaremill.sttp.client4" %% "core" % "4.0.9",
       "com.softwaremill.sttp.client4" %% "circe" % "4.0.9",
-      "com.github.ghostdogpr" %% "caliban-client" % "2.10.1",
+      "com.github.ghostdogpr" %% "caliban-client" % "2.11.1",
       "org.bouncycastle" % "bcprov-jdk18on" % "1.81",
+      "com.aliyun" % "aliyun-java-sdk-core" % "4.7.6",
+      "com.aliyun" % "aliyun-java-sdk-cdn" % "3.8.8",
+      "org.scala-lang.modules" %% "scala-parallel-collections" % "1.2.0",
       // "com.lihaoyi" % "ammonite" % "3.0.2" cross CrossVersion.full,
       "org.scalameta" %% "munit" % "1.1.1" % Test
     ) ++ jsonLib
