@@ -1,9 +1,9 @@
-package com.timzaak.devops.scripts
+package com.timzaak.devops.shell.scripts
 
 import better.files.File
-import com.timzaak.devops.config.{ SSHClientBuild, SSHClientConfig }
-import com.timzaak.devops.extra.LocalProcessExtra
-import com.timzaak.devops.extra.LocalProcessExtra.*
+import com.timzaak.devops.shell.config.{SSHClientBuild, SSHClientConfig}
+import com.timzaak.devops.shell.extra.LocalProcessExtra.*
+import com.timzaak.devops.shell.extra.LocalProcessExtra
 import com.typesafe.config.{ Config, ConfigFactory }
 
 import scala.jdk.CollectionConverters.*

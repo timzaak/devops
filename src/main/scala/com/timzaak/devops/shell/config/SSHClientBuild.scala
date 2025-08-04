@@ -1,9 +1,9 @@
-package com.timzaak.devops.config
+package com.timzaak.devops.shell.config
 
 import com.typesafe.config.{ Config, ConfigFactory }
 import io.circe.config.syntax.*
 import com.sshtools.client.SshClient.SshClientBuilder as Builder
-import com.timzaak.devops.client.SSHClient
+import com.timzaak.devops.shell.client.SSHClient
 import io.circe.derivation.{ Configuration, ConfiguredCodec }
 
 import scala.jdk.CollectionConverters.*

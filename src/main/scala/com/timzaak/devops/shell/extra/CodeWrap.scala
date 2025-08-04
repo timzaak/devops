@@ -1,4 +1,4 @@
-package com.timzaak.devops.extra
+package com.timzaak.devops.shell.extra
 
 case class CodeWrap(code: Int) {
   inline def &&(next: => CodeWrap): CodeWrap = {

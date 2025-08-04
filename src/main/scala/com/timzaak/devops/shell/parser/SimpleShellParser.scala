@@ -1,4 +1,4 @@
-package com.timzaak.devops.parser
+package com.timzaak.devops.shell.parser
 
 import scala.jdk.CollectionConverters.*
 

@@ -1,4 +1,4 @@
-import com.timzaak.devops.scripts.ConfigShellRun
+import com.timzaak.devops.shell.scripts.ConfigShellRun
 
 object RunLocalScript {
   def main(args: Array[String]): Unit = {

@@ -1,5 +1,5 @@
-import com.timzaak.devops.config.{ SSHClientBuild, SSHClientConfig }
 import com.timzaak.devops.k8s.Kubectl
+import com.timzaak.devops.shell.config.{SSHClientBuild, SSHClientConfig}
 import com.typesafe.config.{ Config, ConfigFactory }
 
 object RenewSSLCert {
@@ -9,7 +9,6 @@ object RenewSSLCert {
 
     val basePath = args(0) // path to store cert and key
     val domain = args(1) // example.com
-    import com.timzaak.devops.extra.LocalProcessExtra.*
     localRun { implicit shell =>
       s"docker run --rm neilpang/acme.sh -v \"$basePath\":/out --issue --server letsencrypt " +
         s"--cert-file /out/$domain.cer --key-file /out/$domain.key " +

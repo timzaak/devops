@@ -1,6 +1,5 @@
-import com.timzaak.devops.config.{ SSHClientBuild, SSHClientConfig }
-import com.timzaak.devops.extra.ShellExtra.*
-import com.timzaak.devops.extra.mustOK
+import com.timzaak.devops.shell.config.{SSHClientBuild, SSHClientConfig}
+import com.timzaak.devops.shell.extra.mustOK
 import com.typesafe.config.{ Config, ConfigFactory }
 
 @main def initHost(): Unit = {

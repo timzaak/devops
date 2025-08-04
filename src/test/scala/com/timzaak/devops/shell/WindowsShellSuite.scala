@@ -1,6 +1,6 @@
-package com.timzaak.devops
+package com.timzaak.devops.shell
 
-import com.timzaak.devops.scripts.ConfigShellRun
+import com.timzaak.devops.shell.scripts.ConfigShellRun
 import munit.FunSuite
 
 class WindowsShellSuite extends FunSuite {

@@ -1,4 +1,4 @@
-package com.timzaak.devops.extra
+package com.timzaak.devops.shell.extra
 
 import com.typesafe.scalalogging.Logger
 import scala.sys.process.ProcessLogger

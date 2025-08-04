@@ -1,12 +1,12 @@
-package com.timzaak.devops.client
+package com.timzaak.devops.shell.client
 
 import com.sshtools.client.SshClient
 import com.sshtools.client.scp.ScpClient
 import com.sshtools.client.tasks.ShellTask
 import com.typesafe.scalalogging.Logger
-import com.timzaak.devops.config.SSHClientConfig
-import com.timzaak.devops.extra.ShellExtra.*
-import com.timzaak.devops.parser.SimpleShellParser
+import com.timzaak.devops.shell.extra.ShellExtra.*
+import com.timzaak.devops.shell.config.SSHClientConfig
+import com.timzaak.devops.shell.parser.SimpleShellParser
 
 case class ExpectShell(shell: com.sshtools.client.shell.ExpectShell, rootPassword: Option[String])
 

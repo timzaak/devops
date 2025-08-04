@@ -1,7 +1,7 @@
-package com.timzaak.devops.extra
+package com.timzaak.devops.shell.extra
 
 import com.sshtools.client.shell.ShellProcess
-import com.timzaak.devops.client.ExpectShell
+import com.timzaak.devops.shell.client.ExpectShell
 import com.typesafe.scalalogging.Logger
 
 import scala.io.Source

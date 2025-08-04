@@ -1,7 +1,6 @@
 package com.timzaak.devops.k8s
 
 import better.files.File
-import com.timzaak.devops.extra.LocalProcessExtra.*
 
 import java.io.ByteArrayOutputStream
 // PS: local host should install kubectl and config correctly

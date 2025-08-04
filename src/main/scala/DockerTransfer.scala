@@ -1,4 +1,3 @@
-import com.timzaak.devops.extra.LocalProcessExtra.*
 import com.typesafe.config.ConfigFactory
 
 //runMain DockerTransfer qingpan/rnacos:v0.6.14

@@ -1,4 +1,4 @@
-package com.timzaak.devops.extra
+package com.timzaak.devops.shell.extra
 
 import java.time.format.DateTimeFormatter
 import java.time.{ LocalDate, LocalDateTime }

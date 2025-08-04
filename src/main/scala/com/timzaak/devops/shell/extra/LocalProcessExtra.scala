@@ -1,6 +1,6 @@
-package com.timzaak.devops.extra
+package com.timzaak.devops.shell.extra
 
-import com.timzaak.devops.extra.LocalSession.isWindows
+import LocalSession.isWindows
 
 import java.io.{ File, OutputStream }
 import sys.process.Process
