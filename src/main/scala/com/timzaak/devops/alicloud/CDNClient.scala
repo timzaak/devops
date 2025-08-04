@@ -14,7 +14,6 @@ import java.time.{LocalDateTime, ZoneOffset}
 import java.util.zip.GZIPInputStream
 import scala.jdk.CollectionConverters.*
 import scala.util.{Failure, Success, Try}
-import scala.util.matching.Regex
 
 // CDN日志条目的数据结构
 case class CDNLogEntry(
@@ -34,7 +33,7 @@ case class CDNLogEntry(
   accessIP: String           // 访问IP
 )
 
-class CDNLogAnalyse(
+class CDNClient(
                      accessKeyId: String,
                      accessKeySecret: String,
                      regionId: String,
@@ -125,9 +124,6 @@ class CDNLogAnalyse(
    * @return 解析后的日志条目列表
    */
   def parseLogFile(logFile: io.File): List[CDNLogEntry] = {
-    val logPattern: Regex = 
-      """\[([^\]]+)\]\s+(\S+)\s+(\S+)\s+(\d+)\s+"([^"]*)"\s+"([^"]*)\s+([^"]*?)"\s+(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+"([^"]*)"\s+"([^"]*)"\s+(\S+)""".r
-
     Try {
       val inputStream = if (logFile.getName.endsWith(".gz")) {
         new GZIPInputStream(new java.io.FileInputStream(logFile))
@@ -155,33 +151,155 @@ class CDNLogAnalyse(
    * @return 解析后的日志条目（如果解析成功）
    */
   def parseLogLine(line: String): Option[CDNLogEntry] = {
-    val logPattern: Regex = 
-      """\[([^\]]+)\]\s+(\S+)\s+(\S+)\s+(\d+)\s+"([^"]*)"\s+"([^"]*)\s+([^"]*?)"\s+(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+"([^"]*)"\s+"([^"]*)"\s+(\S+)""".r
+    def parseFields(): Option[CDNLogEntry] = {
+      // 解析访问时间 [8/Jan/2025:20:16:54 +0800]
+      val timeStart = line.indexOf('[')
+      val timeEnd = line.indexOf(']', timeStart)
+      if (timeStart == -1 || timeEnd == -1) return None
+      
+      val accessTime = line.substring(timeStart + 1, timeEnd)
+      var pos = timeEnd + 1
+      
+      // 跳过空格
+      while (pos < line.length && line.charAt(pos) == ' ') pos += 1
+      
+      // 解析客户端IP
+      val clientIPStart = pos
+      while (pos < line.length && line.charAt(pos) != ' ') pos += 1
+      val clientIP = line.substring(clientIPStart, pos)
+      
+      // 跳过空格
+      while (pos < line.length && line.charAt(pos) == ' ') pos += 1
+      
+      // 解析代理IP
+      val proxyIPStart = pos
+      while (pos < line.length && line.charAt(pos) != ' ') pos += 1
+      val proxyIPRaw = line.substring(proxyIPStart, pos)
+      val proxyIP = if (proxyIPRaw == "-") "" else proxyIPRaw
+      
+      // 跳过空格
+      while (pos < line.length && line.charAt(pos) == ' ') pos += 1
+      
+      // 解析响应时间
+      val responseTimeStart = pos
+      while (pos < line.length && line.charAt(pos) != ' ') pos += 1
+      val responseTime = line.substring(responseTimeStart, pos).toInt
+      
+      // 跳过空格
+      while (pos < line.length && line.charAt(pos) == ' ') pos += 1
+      
+      // 解析 Referer (在双引号中)
+      if (pos >= line.length || line.charAt(pos) != '"') return None
+      pos += 1 // 跳过开始的双引号
+      val refererStart = pos
+      while (pos < line.length && line.charAt(pos) != '"') pos += 1
+      if (pos >= line.length) return None
+      val referer = line.substring(refererStart, pos)
+      pos += 1 // 跳过结束的双引号
+      
+      // 跳过空格
+      while (pos < line.length && line.charAt(pos) == ' ') pos += 1
+      
+      // 解析请求方法和URL (在双引号中，格式: "GET http://...")
+      if (pos >= line.length || line.charAt(pos) != '"') return None
+      pos += 1 // 跳过开始的双引号
+      val requestStart = pos
+      while (pos < line.length && line.charAt(pos) != '"') pos += 1
+      if (pos >= line.length) return None
+      val requestLine = line.substring(requestStart, pos)
+      pos += 1 // 跳过结束的双引号
+      
+      // 分解请求行为方法和URL
+      val requestParts = requestLine.split(" ", 2)
+      if (requestParts.length < 2) return None
+      val requestMethod = requestParts(0)
+      val requestURL = requestParts(1)
+      
+      // 跳过空格
+      while (pos < line.length && line.charAt(pos) == ' ') pos += 1
+      
+      // 解析HTTP状态码
+      val statusCodeStart = pos
+      while (pos < line.length && line.charAt(pos) != ' ') pos += 1
+      val httpStatusCode = line.substring(statusCodeStart, pos).toInt
+      
+      // 跳过空格
+      while (pos < line.length && line.charAt(pos) == ' ') pos += 1
+      
+      // 解析请求字节数
+      val requestBytesStart = pos
+      while (pos < line.length && line.charAt(pos) != ' ') pos += 1
+      val requestBytes = line.substring(requestBytesStart, pos).toInt
+      
+      // 跳过空格
+      while (pos < line.length && line.charAt(pos) == ' ') pos += 1
+      
+      // 解析响应字节数
+      val responseBytesStart = pos
+      while (pos < line.length && line.charAt(pos) != ' ') pos += 1
+      val responseBytes = line.substring(responseBytesStart, pos).toInt
+      
+      // 跳过空格
+      while (pos < line.length && line.charAt(pos) == ' ') pos += 1
+      
+      // 解析缓存命中状态
+      val cacheHitStart = pos
+      while (pos < line.length && line.charAt(pos) != ' ') pos += 1
+      val cacheHitStatus = line.substring(cacheHitStart, pos)
+      
+      // 跳过空格
+      while (pos < line.length && line.charAt(pos) == ' ') pos += 1
+      
+      // 解析 User-Agent (在双引号中)
+      if (pos >= line.length || line.charAt(pos) != '"') return None
+      pos += 1 // 跳过开始的双引号
+      val userAgentStart = pos
+      while (pos < line.length && line.charAt(pos) != '"') pos += 1
+      if (pos >= line.length) return None
+      val userAgent = line.substring(userAgentStart, pos)
+      pos += 1 // 跳过结束的双引号
+      
+      // 跳过空格
+      while (pos < line.length && line.charAt(pos) == ' ') pos += 1
+      
+      // 解析文件类型 (在双引号中)
+      if (pos >= line.length || line.charAt(pos) != '"') return None
+      pos += 1 // 跳过开始的双引号
+      val fileTypeStart = pos
+      while (pos < line.length && line.charAt(pos) != '"') pos += 1
+      if (pos >= line.length) return None
+      val fileType = line.substring(fileTypeStart, pos)
+      pos += 1 // 跳过结束的双引号
+      
+      // 跳过空格
+      while (pos < line.length && line.charAt(pos) == ' ') pos += 1
+      
+      // 解析访问IP (最后一个字段)
+      val accessIPStart = pos
+      while (pos < line.length && line.charAt(pos) != ' ') pos += 1
+      val accessIP = line.substring(accessIPStart, if (pos < line.length) pos else line.length)
+      
+      Some(CDNLogEntry(
+        accessTime = accessTime,
+        clientIP = clientIP,
+        proxyIP = proxyIP,
+        responseTime = responseTime,
+        referer = referer,
+        requestMethod = requestMethod,
+        requestURL = requestURL,
+        httpStatusCode = httpStatusCode,
+        requestBytes = requestBytes,
+        responseBytes = responseBytes,
+        cacheHitStatus = cacheHitStatus,
+        userAgent = userAgent,
+        fileType = fileType,
+        accessIP = accessIP
+      ))
+    }
 
-    line match {
-      case logPattern(accessTime, clientIP, proxyIP, responseTime, referer, requestMethod, requestURL, 
-                     httpStatusCode, requestBytes, responseBytes, cacheHitStatus, userAgent, fileType, accessIP) =>
-        Try {
-          CDNLogEntry(
-            accessTime = accessTime,
-            clientIP = clientIP,
-            proxyIP = if (proxyIP == "-") "" else proxyIP,
-            responseTime = responseTime.toInt,
-            referer = referer,
-            requestMethod = requestMethod,
-            requestURL = requestURL,
-            httpStatusCode = httpStatusCode.toInt,
-            requestBytes = requestBytes.toInt,
-            responseBytes = responseBytes.toInt,
-            cacheHitStatus = cacheHitStatus,
-            userAgent = userAgent,
-            fileType = fileType,
-            accessIP = accessIP
-          )
-        }.toOption
-      case _ =>
-        println(s"Failed to parse log line: $line")
-        None
+    Try(parseFields()).toOption.flatten.orElse {
+      println(s"Failed to parse log line: $line")
+      None
     }
   }
 

@@ -5,7 +5,7 @@ import munit.FunSuite
 class CDNClientSuite extends FunSuite {
 
   // 创建测试用的 CDNLogAnalyse 实例
-  val cdnLogAnalyse = new CDNLogAnalyse("test-key", "test-secret", "cn-hangzhou")
+  val cdnLogAnalyse = new CDNClient("test-key", "test-secret", "cn-hangzhou")
 
   test("parseLogLine should parse valid CDN log line correctly") {
     val logLine = """[8/Jan/2025:20:16:54 +0800] 139.224.XXX.XXX - 246 "-" "GET http://cdn.aliyun.cn/images/cdn.gif" 403 369 978 MISS "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36" "application/xml" 139.224.XXX.XXX"""

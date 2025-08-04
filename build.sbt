@@ -10,6 +10,9 @@ lazy val jsonLib = {
     "io.circe" %% "circe-parser").map(_ % circeVersion)
 }
 
+javacOptions ++= Seq("-encoding", "UTF-8")
+scalacOptions ++= Seq("-encoding", "UTF-8")
+
 lazy val root = project
   .in(file("."))
   .settings(
