@@ -1,3 +1,4 @@
+import com.timzaak.devops.shell.extra.ShellExtra.*
 import com.timzaak.devops.shell.config.{SSHClientBuild, SSHClientConfig}
 import com.timzaak.devops.shell.extra.mustOK
 import com.typesafe.config.{ Config, ConfigFactory }

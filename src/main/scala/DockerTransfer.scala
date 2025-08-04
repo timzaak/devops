@@ -1,6 +1,7 @@
 import com.typesafe.config.ConfigFactory
 
 //runMain DockerTransfer qingpan/rnacos:v0.6.14
+import com.timzaak.devops.shell.extra.LocalProcessExtra.*
 
 object DockerTransfer {
   def main(args: Array[String]) = {
