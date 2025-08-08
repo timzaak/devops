@@ -1,47 +1,57 @@
-import com.timzaak.devops.alicloud.{CDNClient, CDNLogEntry}
+import com.timzaak.devops.alicloud.{ CDNClient, CDNLogEntry }
+import com.timzaak.devops.location.{ Ip2Region, RegionInfo }
 import com.typesafe.config.ConfigFactory
 import io.circe.*
 import io.circe.config.syntax.*
 import io.circe.generic.auto.*
 import better.files.*
+import sttp.client4.*
 
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ForkJoinPool
 import scala.collection.parallel.ForkJoinTaskSupport
+import scala.util.{ Try, Success, Failure }
 
 import scala.collection.parallel.CollectionConverters.*
-
-
 
 // sbt "runMain AliCDNLogAnalyse https://wiki.example.com"
 object AliCDNLogAnalyse {
 
   case class CDNConfig(
-                        accessKeyId: String,
-                        accessKeySecret: String,
-                        regionId: String,
-                        logDir: String
-                      )
+    accessKeyId: String,
+    accessKeySecret: String,
+    regionId: String,
+    logDir: String
+  )
 
   def main(args: Array[String]): Unit = {
     val config = ConfigFactory.load().getConfig("alicloud.cdn").as[CDNConfig].toTry.get
 
+    // Initialize HTTP backend for both CDN client and IP location queries
+    val backend: SyncBackend = DefaultSyncBackend()
+
     val cdnLogAnalyse = CDNClient(
       accessKeyId = config.accessKeyId,
       accessKeySecret = config.accessKeySecret,
-      regionId = config.regionId
+      regionId = config.regionId,
+      backend = backend
     )
+
+    val ip2Region = Ip2Region(backend)
 
     args.foreach { domain =>
       println(s"Processing domain: $domain ============")
       val domainLogDir = downloadLogFile(cdnLogAnalyse, domain, config.logDir)
       // val domainLogDir = s"${config.logDir}/${domain}/2025-07-31"
-      analyzeLogFiles(cdnLogAnalyse,domainLogDir)
+      analyzeLogFiles(cdnLogAnalyse, domainLogDir, ip2Region)
     }
 
+    // Show cache statistics
+    val (cacheSize, _) = ip2Region.getCacheStats
+    println(f"\nIP缓存统计: 缓存了 $cacheSize 个IP地址的位置信息")
 
-
+    backend.close()
   }
 
   // Process a single domain
@@ -65,7 +75,7 @@ object AliCDNLogAnalyse {
     )
     val logInfo = info.par
     logInfo.tasksupport = taskSupport
-    logInfo.foreach{ v=>
+    logInfo.foreach { v =>
       cdnLogAnalyse.downloadLog(v, domainLogDir)
       println(s"download: ${v._1}")
     }
@@ -75,7 +85,7 @@ object AliCDNLogAnalyse {
   }
 
   // 分析日志文件的统计功能
-  private def analyzeLogFiles(cdnLogAnalyse: CDNClient, logDir: String): Unit = {
+  private def analyzeLogFiles(cdnLogAnalyse: CDNClient, logDir: String, ip2Region: Ip2Region): Unit = {
     val logDirectory = File(logDir)
     if (!logDirectory.exists) {
       println(s"Log directory does not exist: $logDir")
@@ -97,7 +107,6 @@ object AliCDNLogAnalyse {
 
     // 创建CDNLogAnalyse实例用于解析
 
-
     val parallelFiles = logFiles.par
 
     val allLogEntries = parallelFiles.flatMap { file =>
@@ -110,14 +119,24 @@ object AliCDNLogAnalyse {
       return
     }
 
-    performStatistics(allLogEntries)
+    performStatistics(allLogEntries, ip2Region)
+  }
+
+  // 获取IP地理位置信息的辅助函数
+  private def getIpLocation(ip: String, ip2Region: Ip2Region): String = {
+    ip2Region.byIp(ip) match {
+      case Success(regionInfo) =>
+        s"${regionInfo.country}-${regionInfo.region}-${regionInfo.city}"
+      case Failure(_) =>
+        "未知位置"
+    }
   }
 
   // 执行统计分析
-  private def performStatistics(logEntries: List[CDNLogEntry]): Unit = {
-    println("\n" + "="*80)
+  private def performStatistics(logEntries: List[CDNLogEntry], ip2Region: Ip2Region): Unit = {
+    println("\n" + "=" * 80)
     println("CDN 日志统计分析结果")
-    println("="*80)
+    println("=" * 80)
 
     val parallelEntries = logEntries.par
     val analysisPool = ForkJoinPool(Runtime.getRuntime.availableProcessors())
@@ -134,12 +153,14 @@ object AliCDNLogAnalyse {
       .take(10)
 
     ipCounts.zipWithIndex.foreach { case ((ip, count), index) =>
-      println(f"${index + 1}%2d. IP: $ip%-15s 访问次数: $count%,d")
+      val location = getIpLocation(ip, ip2Region)
+      println(f"${index + 1}%2d. IP: $ip%-15s [$location] 访问次数: $count%,d")
     }
 
     println("\n2. 响应字节数最多的连接:")
     val maxResponseBytes = parallelEntries.maxBy(_.responseBytes)
-    println(f"IP: ${maxResponseBytes.clientIP}%-15s")
+    val maxBytesLocation = getIpLocation(maxResponseBytes.clientIP, ip2Region)
+    println(f"IP: ${maxResponseBytes.clientIP}%-15s [$maxBytesLocation]")
     println(f"URL: ${maxResponseBytes.requestURL}")
     println(f"响应字节数: ${maxResponseBytes.responseBytes}%,d bytes")
     println(f"User-Agent: ${maxResponseBytes.userAgent}")
@@ -162,7 +183,8 @@ object AliCDNLogAnalyse {
     val top5IPs = ipCounts.take(5)
 
     top5IPs.zipWithIndex.foreach { case ((ip, count), index) =>
-      println(f"\n${index + 1}. IP: $ip (访问次数: $count%,d)")
+      val detailLocation = getIpLocation(ip, ip2Region)
+      println(f"\n${index + 1}. IP: $ip [$detailLocation] (访问次数: $count%,d)")
 
       val ipEntries = logEntries.filter(_.clientIP == ip)
       val ipParallel = ipEntries.par
@@ -212,13 +234,13 @@ object AliCDNLogAnalyse {
     }
 
     println("\n5. CDN盗刷检测分析:")
-    detectCDNAbuse(logEntries, analysisPool)
+    detectCDNAbuse(logEntries, analysisPool, ip2Region)
 
     analysisPool.shutdown()
   }
 
   // CDN盗刷检测分析
-  private def detectCDNAbuse(logEntries: List[CDNLogEntry], pool: ForkJoinPool): Unit = {
+  private def detectCDNAbuse(logEntries: List[CDNLogEntry], pool: ForkJoinPool, ip2Region: Ip2Region): Unit = {
     val parallelEntries = logEntries.par
     parallelEntries.tasksupport = ForkJoinTaskSupport(pool)
 
@@ -240,35 +262,36 @@ object AliCDNLogAnalyse {
 
     println("\n可疑高频访问IP分析:")
     val suspiciousIPs = ipStats.filter { case (_, requestCount, totalBytes, uniqueUrls, userAgents, _) =>
-      requestCount > 1000 || // 请求次数超过1000
-        totalBytes > 100 * 1024 * 1024 || // 流量超过100MB
-        (requestCount > 100 && uniqueUrls < 5) || // 高频访问但URL很少
-        userAgents.size == 1 // 只有一个User-Agent
+      requestCount > 500 || // 请求次数超过1000
+      totalBytes > 1024 * 1024 * 1024 || // 流量超过1G
+      (requestCount > 200 && uniqueUrls < 5) // 高频访问但URL很少
     }
 
     if (suspiciousIPs.nonEmpty) {
-      suspiciousIPs.take(10).zipWithIndex.foreach { case ((ip, requestCount, totalBytes, uniqueUrls, userAgents, avgResponseTime), index) =>
-        println(f"\n${index + 1}. 可疑IP: $ip")
-        println(f"   请求次数: $requestCount%,d")
-        println(f"   总流量: ${totalBytes / (1024 * 1024)}%,d MB")
-        println(f"   访问URL数量: $uniqueUrls")
-        println(f"   User-Agent数量: ${userAgents.size}")
-        println(f"   平均响应时间: ${avgResponseTime}ms")
+      suspiciousIPs.take(10).zipWithIndex.foreach {
+        case ((ip, requestCount, totalBytes, uniqueUrls, userAgents, avgResponseTime), index) =>
+          val suspiciousLocation = getIpLocation(ip, ip2Region)
+          println(f"\n${index + 1}. 可疑IP: $ip [$suspiciousLocation]")
+          println(f"   请求次数: $requestCount%,d")
+          println(f"   总流量: ${totalBytes / (1024 * 1024)}%,d MB")
+          println(f"   访问URL数量: $uniqueUrls")
+          println(f"   User-Agent数量: ${userAgents.size}")
+          println(f"   平均响应时间: ${avgResponseTime}ms")
 
-        // 分析可疑原因
-        val reasons = scala.collection.mutable.ListBuffer[String]()
-        if (requestCount > 5000) reasons += "超高频访问"
-        if (totalBytes > 500 * 1024 * 1024) reasons += "超大流量消耗"
-        if (requestCount > 100 && uniqueUrls < 5) reasons += "重复访问少数URL"
-        if (userAgents.size == 1) reasons += "单一User-Agent"
-        if (avgResponseTime < 50) reasons += "响应时间异常短"
+          // 分析可疑原因
+          val reasons = scala.collection.mutable.ListBuffer[String]()
+          if (requestCount > 500) reasons += "超高频访问"
+          if (totalBytes > 1024 * 1024 * 1024) reasons += "超大流量消耗"
+          if (requestCount > 200 && uniqueUrls < 5) reasons += "重复访问少数URL"
+          // if (userAgents.size == 1) reasons += "单一User-Agent"
+          if (avgResponseTime < 50) reasons += "响应时间异常短"
 
-        println(f"   可疑原因: ${reasons.mkString(", ")}")
+          println(f"   可疑原因: ${reasons.mkString(", ")}")
 
-        if (userAgents.size <= 3) {
-          println("   User-Agent:")
-          userAgents.take(3).foreach(ua => println(f"   - $ua"))
-        }
+          if (userAgents.size <= 3) {
+            println("   User-Agent:")
+            userAgents.take(3).foreach(ua => println(f"   - $ua"))
+          }
       }
     } else {
       println("未发现明显的可疑访问模式")
@@ -291,11 +314,11 @@ object AliCDNLogAnalyse {
 
     val suspiciousUserAgents = userAgentStats.filter { case (ua, requestCount, uniqueIPs, _) =>
       ua.toLowerCase.contains("bot") ||
-        ua.toLowerCase.contains("crawler") ||
-        ua.toLowerCase.contains("spider") ||
-        ua.toLowerCase.contains("wget") ||
-        ua.toLowerCase.contains("curl") ||
-        (requestCount > 1000 && uniqueIPs < 5) // 高频但IP很少
+      ua.toLowerCase.contains("crawler") ||
+      ua.toLowerCase.contains("spider") ||
+      ua.toLowerCase.contains("wget") ||
+      ua.toLowerCase.contains("curl") ||
+      (requestCount > 1000 && uniqueIPs < 5) // 高频但IP很少
     }
 
     if (suspiciousUserAgents.nonEmpty) {
@@ -334,6 +357,7 @@ object AliCDNLogAnalyse {
       println(f"$hour%2d:00 - $count%,6d $bar")
     }
 
+    /*
     // 检测深夜异常访问
     val nightAccess = hourlyStats.filter { case (hour, _) => hour >= 0 && hour <= 5 }
     val dayAccess = hourlyStats.filter { case (hour, _) => hour >= 9 && hour <= 17 }
@@ -348,5 +372,6 @@ object AliCDNLogAnalyse {
         println("这可能表明存在自动化工具或恶意访问")
       }
     }
+     */
   }
 }

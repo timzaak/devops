@@ -5,7 +5,8 @@ import io.circe.generic.auto.*
 import sttp.client4.*
 import sttp.client4.circe.*
 
-import scala.util.{Try, Success, Failure}
+import scala.collection.concurrent.TrieMap
+import scala.util.{ Try, Success, Failure }
 
 // IP地理位置信息数据类
 case class IpLocationInfo(
@@ -33,28 +34,49 @@ case class RegionInfo(
   ip: String
 )
 
-class Ip2Region {
-  
+class Ip2Region(backend: SyncBackend) {
+
   private val baseUrl = "http://ip-api.com/json"
-  
+  private val ipCache = TrieMap[String, RegionInfo]()
+
   /**
-   * 根据IP地址查询地理位置信息
+   * 根据IP地址查询地理位置信息（带缓存）
    * @param ip IP地址
-   * @param backend HTTP客户端后端
    * @return 地理位置信息
    */
-  def byIp(ip: String)(using backend: SyncBackend): Try[RegionInfo] = {
+  def byIp(ip: String): Try[RegionInfo] = {
     if (ip == null || ip.trim.isEmpty) {
       return Failure(new IllegalArgumentException("IP地址不能为空"))
     }
-    
+
+    // 先检查缓存
+    ipCache.get(ip) match {
+      case Some(cachedResult) =>
+        Success(cachedResult)
+      case None =>
+        // 缓存中没有，进行网络请求
+        val result = fetchIpLocation(ip)
+        result match {
+          case Success(regionInfo) =>
+            // 缓存成功的结果
+            ipCache.put(ip, regionInfo)
+            Success(regionInfo)
+          case failure => failure
+        }
+    }
+  }
+
+  /**
+   * 实际的网络请求方法
+   */
+  private def fetchIpLocation(ip: String): Try[RegionInfo] = {
     val request = basicRequest
       .get(uri"$baseUrl/$ip")
       .response(asJson[IpLocationInfo])
-    
+
     Try {
       val response = request.send(backend)
-      
+
       response.body match {
         case Right(locationInfo) =>
           if (locationInfo.status == "success") {
@@ -72,38 +94,36 @@ class Ip2Region {
       }
     }
   }
-  
+
   /**
    * 批量查询多个IP的地理位置信息
    * @param ips IP地址列表
-   * @param backend HTTP客户端后端
    * @return 地理位置信息列表
    */
-  def byIps(ips: List[String])(using backend: SyncBackend): List[Try[RegionInfo]] = {
+  def byIps(ips: List[String]): List[Try[RegionInfo]] = {
     if (ips == null) {
       return List.empty
     }
     ips.filter(ip => ip != null && ip.trim.nonEmpty).map(ip => byIp(ip))
   }
-  
+
   /**
    * 获取详细的IP地理位置信息
    * @param ip IP地址
-   * @param backend HTTP客户端后端
    * @return 详细的地理位置信息
    */
-  def getDetailedInfo(ip: String)(using backend: SyncBackend): Try[IpLocationInfo] = {
+  def getDetailedInfo(ip: String): Try[IpLocationInfo] = {
     if (ip == null || ip.trim.isEmpty) {
       return Failure(new IllegalArgumentException("IP地址不能为空"))
     }
-    
+
     val request = basicRequest
       .get(uri"$baseUrl/$ip")
       .response(asJson[IpLocationInfo])
-    
+
     Try {
       val response = request.send(backend)
-      
+
       response.body match {
         case Right(locationInfo) =>
           if (locationInfo.status == "success") {
@@ -116,8 +136,15 @@ class Ip2Region {
       }
     }
   }
+
+  /**
+   * 获取缓存统计信息
+   */
+  def getCacheStats: (Int, List[String]) = {
+    (ipCache.size, ipCache.keys.toList.sorted)
+  }
 }
 
 object Ip2Region {
-  def apply(): Ip2Region = new Ip2Region()
+  def apply(backend: SyncBackend): Ip2Region = new Ip2Region(backend)
 }

@@ -5,7 +5,6 @@ import better.files.File
 import java.io.ByteArrayOutputStream
 import com.timzaak.devops.shell.extra.LocalProcessExtra.*
 
-
 // PS: local host should install kubectl and config correctly
 class Kubectl(namespace: String, context: String = "default") {
 

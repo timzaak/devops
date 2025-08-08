@@ -1,5 +1,5 @@
 import com.timzaak.devops.k8s.Kubectl
-import com.timzaak.devops.shell.config.{SSHClientBuild, SSHClientConfig}
+import com.timzaak.devops.shell.config.{ SSHClientBuild, SSHClientConfig }
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.timzaak.devops.shell.extra.LocalProcessExtra.*
 
