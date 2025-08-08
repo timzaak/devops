@@ -358,20 +358,20 @@ object AliCDNLogAnalyse {
     }
 
     /*
-    // 检测深夜异常访问
-    val nightAccess = hourlyStats.filter { case (hour, _) => hour >= 0 && hour <= 5 }
-    val dayAccess = hourlyStats.filter { case (hour, _) => hour >= 9 && hour <= 17 }
+      // 检测深夜异常访问
+      val nightAccess = hourlyStats.filter { case (hour, _) => hour >= 0 && hour <= 5 }
+      val dayAccess = hourlyStats.filter { case (hour, _) => hour >= 9 && hour <= 17 }
 
-    if (nightAccess.nonEmpty && dayAccess.nonEmpty) {
-      val nightTotal = nightAccess.map(_._2).sum
-      val dayTotal = dayAccess.map(_._2).sum
-      val nightRatio = nightTotal.toDouble / (nightTotal + dayTotal)
+      if (nightAccess.nonEmpty && dayAccess.nonEmpty) {
+        val nightTotal = nightAccess.map(_._2).sum
+        val dayTotal = dayAccess.map(_._2).sum
+        val nightRatio = nightTotal.toDouble / (nightTotal + dayTotal)
 
-      if (nightRatio > 0.3) {
-        println(f"\n⚠️  检测到异常: 深夜访问占比过高 (${nightRatio * 100}%.1f%%)")
-        println("这可能表明存在自动化工具或恶意访问")
+        if (nightRatio > 0.3) {
+          println(f"\n⚠️  检测到异常: 深夜访问占比过高 (${nightRatio * 100}%.1f%%)")
+          println("这可能表明存在自动化工具或恶意访问")
+        }
       }
-    }
      */
   }
 }
