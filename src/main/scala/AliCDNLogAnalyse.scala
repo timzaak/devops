@@ -1,5 +1,6 @@
 import com.timzaak.devops.alicloud.{ CDNClient, CDNLogEntry }
-import com.timzaak.devops.location.{ Ip2Region, RegionInfo }
+import com.timzaak.devops.location.Ip2Region
+import com.timzaak.devops.webhook.{ WeChatWorkWebhook, TextMessage, MarkdownMessage }
 import com.typesafe.config.ConfigFactory
 import io.circe.*
 import io.circe.config.syntax.*
@@ -11,7 +12,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ForkJoinPool
 import scala.collection.parallel.ForkJoinTaskSupport
-import scala.util.{ Try, Success, Failure }
+import scala.util.{ Success, Failure }
 
 import scala.collection.parallel.CollectionConverters.*
 
@@ -25,8 +26,14 @@ object AliCDNLogAnalyse {
     logDir: String
   )
 
+  case class AbuseReport(
+    suspiciousIPs: List[(String, Int, Long, Int, List[String], Int)],
+    suspiciousUserAgents: List[(String, Int, Int, Long)]
+  )
+
   def main(args: Array[String]): Unit = {
-    val config = ConfigFactory.load().getConfig("alicloud.cdn").as[CDNConfig].toTry.get
+    val conf = ConfigFactory.load()
+    val config = conf.getConfig("alicloud.cdn").as[CDNConfig].toTry.get
 
     // Initialize HTTP backend for both CDN client and IP location queries
     val backend: SyncBackend = DefaultSyncBackend()
@@ -39,12 +46,12 @@ object AliCDNLogAnalyse {
     )
 
     val ip2Region = Ip2Region(backend)
+    val wechatWebhook = Option(conf.getString("webhook.weChatWork")).map(url => WeChatWorkWebhook(url)(using backend))
 
     args.foreach { domain =>
       println(s"Processing domain: $domain ============")
       val domainLogDir = downloadLogFile(cdnLogAnalyse, domain, config.logDir)
-      // val domainLogDir = s"${config.logDir}/${domain}/2025-07-31"
-      analyzeLogFiles(cdnLogAnalyse, domainLogDir, ip2Region)
+      analyzeLogFiles(cdnLogAnalyse, domainLogDir, ip2Region, domain, wechatWebhook)
     }
 
     // Show cache statistics
@@ -77,18 +84,21 @@ object AliCDNLogAnalyse {
     logInfo.tasksupport = taskSupport
     logInfo.foreach { v =>
       cdnLogAnalyse.downloadLog(v, domainLogDir)
-      println(s"download: ${v._1}")
     }
-    println("download finish....")
     downloadPool.shutdown()
     domainLogDir
   }
 
   // 分析日志文件的统计功能
-  private def analyzeLogFiles(cdnLogAnalyse: CDNClient, logDir: String, ip2Region: Ip2Region): Unit = {
+  private def analyzeLogFiles(
+    cdnLogAnalyse: CDNClient,
+    logDir: String,
+    ip2Region: Ip2Region,
+    domain: String,
+    wechatWebhook: Option[WeChatWorkWebhook]
+  ): Unit = {
     val logDirectory = File(logDir)
     if (!logDirectory.exists) {
-      println(s"Log directory does not exist: $logDir")
       return
     }
 
@@ -99,27 +109,21 @@ object AliCDNLogAnalyse {
       .toList
 
     if (logFiles.isEmpty) {
-      println("No log files found for analysis")
       return
     }
-
-    println(s"Found ${logFiles.length} log files to analyze")
-
     // 创建CDNLogAnalyse实例用于解析
 
     val parallelFiles = logFiles.par
 
     val allLogEntries = parallelFiles.flatMap { file =>
-      println(s"Parsing: ${file.name}")
       cdnLogAnalyse.parseLogFile(file.toJava)
     }.toList
 
     if (allLogEntries.isEmpty) {
-      println("No valid log entries found")
       return
     }
 
-    performStatistics(allLogEntries, ip2Region)
+    performStatistics(allLogEntries, ip2Region, domain, wechatWebhook)
   }
 
   // 获取IP地理位置信息的辅助函数
@@ -133,7 +137,12 @@ object AliCDNLogAnalyse {
   }
 
   // 执行统计分析
-  private def performStatistics(logEntries: List[CDNLogEntry], ip2Region: Ip2Region): Unit = {
+  private def performStatistics(
+    logEntries: List[CDNLogEntry],
+    ip2Region: Ip2Region,
+    domain: String,
+    wechatWebhook: Option[WeChatWorkWebhook]
+  ): Unit = {
     println("\n" + "=" * 80)
     println("CDN 日志统计分析结果")
     println("=" * 80)
@@ -234,13 +243,18 @@ object AliCDNLogAnalyse {
     }
 
     println("\n5. CDN盗刷检测分析:")
-    detectCDNAbuse(logEntries, analysisPool, ip2Region)
+    val abuseReport = detectCDNAbuse(logEntries, analysisPool, ip2Region)
 
     analysisPool.shutdown()
+
+    // Send WeChat Work notification
+    wechatWebhook.foreach { webhook =>
+      sendWeChatReport(webhook, domain, logEntries, ipCounts, urlCounts, top5IPs, abuseReport, ip2Region)
+    }
   }
 
   // CDN盗刷检测分析
-  private def detectCDNAbuse(logEntries: List[CDNLogEntry], pool: ForkJoinPool, ip2Region: Ip2Region): Unit = {
+  private def detectCDNAbuse(logEntries: List[CDNLogEntry], pool: ForkJoinPool, ip2Region: Ip2Region): AbuseReport = {
     val parallelEntries = logEntries.par
     parallelEntries.tasksupport = ForkJoinTaskSupport(pool)
 
@@ -358,20 +372,95 @@ object AliCDNLogAnalyse {
     }
 
     /*
-      // 检测深夜异常访问
-      val nightAccess = hourlyStats.filter { case (hour, _) => hour >= 0 && hour <= 5 }
-      val dayAccess = hourlyStats.filter { case (hour, _) => hour >= 9 && hour <= 17 }
+    // 检测深夜异常访问
+    val nightAccess = hourlyStats.filter { case (hour, _) => hour >= 0 && hour <= 5 }
+    val dayAccess = hourlyStats.filter { case (hour, _) => hour >= 9 && hour <= 17 }
 
-      if (nightAccess.nonEmpty && dayAccess.nonEmpty) {
-        val nightTotal = nightAccess.map(_._2).sum
-        val dayTotal = dayAccess.map(_._2).sum
-        val nightRatio = nightTotal.toDouble / (nightTotal + dayTotal)
+    if (nightAccess.nonEmpty && dayAccess.nonEmpty) {
+      val nightTotal = nightAccess.map(_._2).sum
+      val dayTotal = dayAccess.map(_._2).sum
+      val nightRatio = nightTotal.toDouble / (nightTotal + dayTotal)
 
-        if (nightRatio > 0.3) {
-          println(f"\n⚠️  检测到异常: 深夜访问占比过高 (${nightRatio * 100}%.1f%%)")
-          println("这可能表明存在自动化工具或恶意访问")
-        }
+      if (nightRatio > 0.3) {
+        println(f"\n⚠️  检测到异常: 深夜访问占比过高 (${nightRatio * 100}%.1f%%)")
+        println("这可能表明存在自动化工具或恶意访问")
       }
+    }
      */
+
+    AbuseReport(suspiciousIPs, suspiciousUserAgents)
+  }
+
+  // 发送微信工作通知
+  private def sendWeChatReport(
+    webhook: WeChatWorkWebhook,
+    domain: String,
+    logEntries: List[CDNLogEntry],
+    ipCounts: Seq[(String, Int)],
+    urlCounts: Seq[(String, Int)],
+    top5IPs: Seq[(String, Int)],
+    abuseReport: AbuseReport,
+    ip2Region: Ip2Region
+  ): Unit = {
+    val totalRequests = logEntries.size
+    val totalBytes = logEntries.map(_.responseBytes.toLong).sum
+    val uniqueIPs = logEntries.map(_.clientIP).distinct.size
+    val dateStr = LocalDateTime.now().minusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+
+    val markdownContent = s"""# CDN日志分析报告
+**域名**: $domain
+**日期**: $dateStr
+**总请求数**: ${totalRequests}次
+**总流量**: ${totalBytes / (1024 * 1024)}MB
+**独立IP数**: ${uniqueIPs}个
+
+## 🔥 访问最多的IP TOP5
+${ipCounts
+        .take(5)
+        .zipWithIndex
+        .map { case ((ip, count), index) =>
+          val location = getIpLocation(ip, ip2Region)
+          s"${index + 1}. **$ip** [$location] - ${count}次"
+        }
+        .mkString("\n")}
+
+## 📊 热门URL TOP3
+${urlCounts
+        .take(3)
+        .zipWithIndex
+        .map { case ((url, count), index) =>
+          val shortUrl = if (url.length > 100) url.take(99) + "..." else url
+          s"${index + 1}. **${count}次** - $shortUrl"
+        }
+        .mkString("\n")}
+
+## ⚠️ 安全分析
+${
+        if (abuseReport.suspiciousIPs.nonEmpty) {
+          s"**发现${abuseReport.suspiciousIPs.size}个可疑IP**\n" +
+            abuseReport.suspiciousIPs
+              .take(3)
+              .zipWithIndex
+              .map { case ((ip, requestCount, totalBytes, uniqueUrls, userAgents, avgResponseTime), index) =>
+                val location = getIpLocation(ip, ip2Region)
+                s"${index + 1}. $ip [$location] - ${requestCount}次请求, ${totalBytes / (1024 * 1024)}MB流量"
+              }
+              .mkString("\n")
+        } else "✅ 未发现明显异常访问"
+      }
+
+${
+        if (abuseReport.suspiciousUserAgents.nonEmpty) {
+          s"\n**发现${abuseReport.suspiciousUserAgents.size}个可疑User-Agent**"
+        } else ""
+      }
+"""
+
+    webhook.sendMarkdown(markdownContent) match {
+      case Success(_) =>
+        println(s"✅ 已发送 $domain 的分析报告到企业微信")
+      case Failure(exception) =>
+        println(s"❌ 发送 $domain 的分析报告失败: ${exception.getMessage}")
+    }
   }
 }
