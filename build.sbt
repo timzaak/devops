@@ -35,6 +35,10 @@ lazy val root = project
       "com.aliyun" % "aliyun-java-sdk-cdn" % "3.8.8",
       "org.scala-lang.modules" %% "scala-parallel-collections" % "1.2.0",
       // "com.lihaoyi" % "ammonite" % "3.0.2" cross CrossVersion.full,
-      "org.scalameta" %% "munit" % "1.1.1" % Test
+      "org.scalameta" %% "munit" % "1.1.1" % Test,
+      // for db
+      "com.lihaoyi" %% "scalasql" % "0.4.1",
+      "org.flywaydb" % "flyway-core" % "9.22.3",
+      "org.xerial" % "sqlite-jdbc" % "3.41.2.2"
     ) ++ jsonLib
   )

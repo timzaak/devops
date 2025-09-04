@@ -107,7 +107,14 @@ class CDNClient(
   ): Either[String, io.File] = {
     val (fileName, logPath) = info
     val targetDirectory = File(targetDir)
+    targetDirectory.createDirectories()
     val targetFile = targetDirectory / fileName
+
+    if (targetFile.exists && targetFile.size > 0) {
+      println(s"Log file ${targetFile.name} already exists in ${targetDir}. Skipping download.")
+      return Right(targetFile.toJava)
+    }
+
     val u = s"https://${logPath}"
     val request = basicRequest
       .get(uri"$u")
