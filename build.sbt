@@ -21,20 +21,21 @@ lazy val root = project
     scalaVersion := scala3Version,
     libraryDependencies ++= Seq(
       "com.sshtools" % "maverick-synergy-client" % "3.1.2",
-      "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
-      "ch.qos.logback" % "logback-classic" % "1.5.18",
+      "com.typesafe.scala-logging" %% "scala-logging" % "3.9.6",
+      "ch.qos.logback" % "logback-classic" % "1.5.20",
       "io.circe" %% "circe-config" % "0.10.2",
       "io.circe" %% "circe-optics" % "0.15.1",
-      "com.lihaoyi" %% "mainargs" % "0.7.6",
+      "com.lihaoyi" %% "mainargs" % "0.7.7",
       "com.github.pathikrit" %% "better-files" % "3.9.2",
-      "com.softwaremill.sttp.client4" %% "core" % "4.0.9",
-      "com.softwaremill.sttp.client4" %% "circe" % "4.0.9",
+      "com.softwaremill.sttp.client4" %% "core" % "4.0.12",
+      "com.softwaremill.sttp.client4" %% "circe" % "4.0.12",
       "com.github.ghostdogpr" %% "caliban-client" % "2.11.1",
-      "org.bouncycastle" % "bcprov-jdk18on" % "1.81",
+      "org.bouncycastle" % "bcprov-jdk18on" % "1.82",
+      "org.bouncycastle" % "bcpkix-jdk18on" % "1.82",
       "com.aliyun" % "aliyun-java-sdk-core" % "4.7.6",
       "com.aliyun" % "aliyun-java-sdk-cdn" % "3.8.8",
       "org.scala-lang.modules" %% "scala-parallel-collections" % "1.2.0",
       // "com.lihaoyi" % "ammonite" % "3.0.2" cross CrossVersion.full,
-      "org.scalameta" %% "munit" % "1.1.1" % Test
+      "org.scalameta" %% "munit" % "1.2.1" % Test
     ) ++ jsonLib
   )

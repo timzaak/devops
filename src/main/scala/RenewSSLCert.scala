@@ -12,8 +12,9 @@ object RenewSSLCert {
     val domain = args(1) // example.com
     localRun { implicit shell =>
       s"""docker run --rm -v "$basePath":/out 
-          -e Ali_Key=${conf.getString("ssl.AliKey")} -e Ali_Secret=${conf.getString("ssl.AliSecret")}
-          neilpang/acme.sh --issue --server letsencrypt --fullchain-file /out/$domain.cer --key-file /out/$domain.key --dns dns_ali -d $domain -d '*.$domain'""".!!
+         |-e Ali_Key=${conf.getString("ssl.AliKey")} -e Ali_Secret=${conf.getString("ssl.AliSecret")} 
+         |neilpang/acme.sh --issue --server letsencrypt --fullchain-file /out/$domain.cer --key-file /out/$domain.key --dns dns_ali -d $domain -d '*.$domain'
+         |""".stripMargin.!!
     }
 
     /*
