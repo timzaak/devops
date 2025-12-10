@@ -3,6 +3,11 @@ import com.timzaak.devops.shell.config.{ SSHClientBuild, SSHClientConfig }
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.timzaak.devops.shell.extra.LocalProcessExtra.*
 
+import java.net.InetSocketAddress
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+import javax.net.ssl.{ SNIHostName, SSLContext, SSLSocket }
+
 object RenewSSLCert {
   def main(args: Array[String]): Unit = {
 
@@ -10,6 +15,17 @@ object RenewSSLCert {
 
     val basePath = args(0) // path to store cert and key
     val domain = args(1) // example.com
+
+    val date = getSSLExpire(domain)
+    val duration = ChronoUnit.DAYS.between(
+      Instant.now(),
+      date.toInstant
+    )
+    if (duration >= 15) {
+      println(s"cert expired after $duration days")
+      return
+    }
+
     localRun { implicit shell =>
       s"""docker run --rm -v "$basePath":/out 
          |-e Ali_Key=${conf.getString("ssl.AliKey")} -e Ali_Secret=${conf.getString("ssl.AliSecret")} 
@@ -38,4 +54,24 @@ object RenewSSLCert {
     }
      */
   }
+
+  private def getSSLExpire(host: String, port: Int = 443): java.util.Date = {
+    val context = SSLContext.getInstance("TLS")
+    context.init(null, null, null)
+
+    val socket = context.getSocketFactory.createSocket().asInstanceOf[SSLSocket]
+    val params = socket.getSSLParameters
+    params.setServerNames(java.util.List.of(new SNIHostName(host)))
+    socket.setSSLParameters(params)
+
+    socket.connect(new InetSocketAddress(host, port), 5000)
+    socket.startHandshake()
+
+    val cert = socket.getSession
+      .getPeerCertificates()(0)
+      .asInstanceOf[java.security.cert.X509Certificate]
+
+    cert.getNotAfter
+  }
+
 }

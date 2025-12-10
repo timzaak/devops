@@ -1,11 +1,10 @@
 package bin.ssl
 
-
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
-import org.bouncycastle.cert.jcajce.{JcaX509CertificateConverter, JcaX509v3CertificateBuilder}
-import org.bouncycastle.openssl.jcajce.{JcaPEMWriter, JcaPEMKeyConverter}
+import org.bouncycastle.cert.jcajce.{ JcaX509CertificateConverter, JcaX509v3CertificateBuilder }
+import org.bouncycastle.openssl.jcajce.{ JcaPEMWriter, JcaPEMKeyConverter }
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 import org.bouncycastle.openssl.PEMParser
 
@@ -34,11 +33,11 @@ object SignClientCert {
   }
 
   def issueCert(
-                 caCertPemPath: String,
-                 caKeyPemPath: String,
-                 startAt: Date,
-                 endAt: Date
-               ): (String, String) = {
+    caCertPemPath: String,
+    caKeyPemPath: String,
+    startAt: Date,
+    endAt: Date
+  ): (String, String) = {
 
     // === 加载 CA 证书 ===
     val caCert = loadCertificateFromPem(caCertPemPath)
@@ -66,7 +65,6 @@ object SignClientCert {
       clientKeyPair.getPublic
     )
 
-
     val contentSigner = new JcaContentSignerBuilder("SHA256withECDSA")
       .setProvider("BC")
       .build(caKeyPair.getPrivate)
@@ -88,9 +86,7 @@ object SignClientCert {
     val parser = new PEMParser(new FileReader(path))
     val holder = parser.readObject().asInstanceOf[X509CertificateHolder]
     parser.close()
-    if(holder.isInstanceOf[X509CertificateHolder]) {
-
-    }
+    if (holder.isInstanceOf[X509CertificateHolder]) {}
     new JcaX509CertificateConverter().setProvider("BC").getCertificate(holder)
   }
 
@@ -102,9 +98,9 @@ object SignClientCert {
 
     val converter = new JcaPEMKeyConverter().setProvider("BC")
     obj match {
-      case kp: org.bouncycastle.openssl.PEMKeyPair => converter.getKeyPair(kp)
+      case kp: org.bouncycastle.openssl.PEMKeyPair                => converter.getKeyPair(kp)
       case pk: org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter => null
-      case pk: org.bouncycastle.asn1.pkcs.PrivateKeyInfo =>
+      case pk: org.bouncycastle.asn1.pkcs.PrivateKeyInfo          =>
         new KeyPair(null, converter.getPrivateKey(pk))
       case _ => throw new IllegalArgumentException("Unsupported key format")
     }
