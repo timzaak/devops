@@ -9,4 +9,12 @@ class WindowsShellSuite extends FunSuite {
     ConfigShellRun.localRun("windows.test1")
   }
 
+  test("wsl") {
+    import com.timzaak.devops.shell.extra.LocalProcessExtra.*
+    localRun {  implicit shell =>
+      cd("C:/")
+      """wsl bash -c "ls|grep target"""".!
+    }
+  }
+
 }
