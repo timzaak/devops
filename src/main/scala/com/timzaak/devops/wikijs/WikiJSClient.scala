@@ -1,13 +1,14 @@
 package com.timzaak.devops.wikijs
 
-import WikiJSSchema.*
 import sttp.client3.*
+import WikiJSSchema.*
 import caliban.client.SelectionBuilder
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
-class WikiJSClient(url: String, authorization: String) {
+class WikiJSClient(url: String, authorization: String)(using
+  ex: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+) {
 
   private val backend = HttpClientFutureBackend()
 
@@ -19,15 +20,21 @@ class WikiJSClient(url: String, authorization: String) {
       .map(_.body.toOption.flatten)
   }
 
-  def getPageList(locale: String = "zh") = {
+  def getPageList(locale: Option[String] = None) = {
     Query
       .pages(
-        PageQuery.list(limit = Some(1000), locale = Some(locale))(
+        PageQuery.list(limit = Some(1000), locale = locale)(
           PageListItem.id ~ PageListItem.isPrivate ~ PageListItem.isPublished ~ PageListItem.locale ~ PageListItem.title ~ PageListItem.path
         )
       )
       .send()
-      .map(_.getOrElse(List.empty))
+      .map(
+        _.getOrElse(List.empty).map(
+          identity[
+            (id: Int, isPrivate: Boolean, isPublished: Boolean, locale: String, title: Option[String], path: String)
+          ]
+        )
+      )
   }
   def getSinglePage(id: Int) = {
     Query
@@ -38,7 +45,23 @@ class WikiJSClient(url: String, authorization: String) {
         )
       )
       .send()
-      .map(_.flatten)
+      .map(
+        _.flatten.map(
+          identity[
+            (
+              id: Int,
+              path: String,
+              title: String,
+              content: String,
+              contentType: String,
+              render: Option[String],
+              isPublished: Boolean,
+              toc: Option[String],
+              locale: String
+            )
+          ]
+        )
+      )
   }
 
   def getNavigation() = {
